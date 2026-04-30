@@ -1,0 +1,21 @@
+{
+  "name": "dsfr-architecture",
+  "version": "0.1.0",
+  "description": "A Codex plugin that provides the DSFR architecture skill for domain-scoped functional reactivity.",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "DSFR Architecture",
+    "shortDescription": "Architectural decision protocol for reactive domain logic.",
+    "longDescription": "A Codex plugin that helps agents structure reactive application logic using Domain-Scoped Functional Reactivity.",
+    "developerName": "[TODO: developer-name]",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use DSFR Architecture to design this feature.",
+      "Apply the DSFR skill to refactor this domain."
+    ]
+  }
+}
