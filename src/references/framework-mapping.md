@@ -11,12 +11,19 @@ If the host framework already provides reactive primitives, use them and map the
 - methods / actions / reducers / commands -> entry points or orchestration
 - services / query modules / repository adapters / effect handlers -> effects
 
+When the host language is class-oriented and supports static or equivalent non-instance members:
+
+- prefer the class as the domain boundary when it can cleanly own state and behavior
+- prefer class-local static pure transforms over file-level helpers when that improves ownership and discoverability
+- do not treat file-level co-location as the primary domain boundary if the architecture uses explicit domain classes
+
 ## Angular Signals
 
 - `signal()` -> source state
 - `computed()` -> derived state
 - domain class or service -> ownership boundary
 - methods on the domain/service -> entry points
+- `private static` methods on the domain/service -> preferred pure transforms when they remain free of instance coupling
 - HTTP services or adapter services -> effects
 
 ## Solid
@@ -41,5 +48,13 @@ Prefer caution with `reactive()` structures that invite in-place mutation; prese
 - selectors and derived hooks map to derived state
 - actions, store methods, or domain services map to entry points
 - async thunks, query adapters, or service modules map to effects
+
+In ecosystems that do not rely on classes as the primary ownership boundary, keep using the nearest equivalent domain container. The class-local static transform preference applies only where the language and architecture make that boundary explicit.
+
+## Streaming and Subscription-Heavy Systems
+
+- websocket handlers, event-source listeners, timer loops, and subscription setup belong to effects
+- effect callbacks should route into result entry points or orchestrators
+- do not let subscription-capable framework primitives bypass the effect boundary
 
 Do not force DSFR terminology into a codebase if the existing primitives already express the same ownership and placement cleanly.

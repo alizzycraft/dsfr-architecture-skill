@@ -7,18 +7,28 @@ Use these examples as placement guides, not as mandatory syntax templates.
 ```ts
 type CartItem = { id: string; price: number; quantity: number };
 
-const calculateSubtotal = (items: CartItem[]): number =>
-  items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
-const applyDiscount = (subtotal: number): number =>
-  subtotal > 100 ? subtotal * 0.9 : subtotal;
-
-const calculateTax = (amount: number): number => amount * 0.15;
-
 class CartPricingDomain {
   readonly items = signal<CartItem[]>([]);
-  readonly subtotal = computed(() => applyDiscount(calculateSubtotal(this.items())));
-  readonly total = computed(() => this.subtotal() + calculateTax(this.subtotal()));
+  readonly subtotal = computed(() =>
+    CartPricingDomain.applyDiscount(
+      CartPricingDomain.calculateSubtotal(this.items()),
+    ),
+  );
+  readonly total = computed(() =>
+    this.subtotal() + CartPricingDomain.calculateTax(this.subtotal()),
+  );
+
+  private static calculateSubtotal(items: CartItem[]): number {
+    return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  }
+
+  private static applyDiscount(subtotal: number): number {
+    return subtotal > 100 ? subtotal * 0.9 : subtotal;
+  }
+
+  private static calculateTax(amount: number): number {
+    return amount * 0.15;
+  }
 
   addItem(item: CartItem) {
     this.items.update(items => [...items, item]);
@@ -30,7 +40,7 @@ Placement:
 
 - `items` is source state.
 - `subtotal` and `total` are derived state.
-- pricing math is pure transformation logic.
+- pricing math is pure transformation logic co-located inside the domain class.
 - `addItem` is an entry point.
 
 ## Example 2: Async IO Routed Through Effect
@@ -112,3 +122,89 @@ Placement:
 - domains do not mutate one another directly.
 - cross-domain flow is explicit.
 - the orchestrator coordinates; ownership stays local.
+
+## Example 4: Optimistic Update With Rollback
+
+```ts
+type CartSnapshot = { items: CartItem[] };
+
+class CartDomain {
+  readonly items = signal<CartItem[]>([]);
+  readonly pendingSnapshot = signal<CartSnapshot | null>(null);
+
+  applyQuantityChange(itemId: string, quantity: number) {
+    this.pendingSnapshot.set({ items: this.items() });
+    this.items.update(items =>
+      items.map(item => item.id === itemId ? { ...item, quantity } : item),
+    );
+  }
+
+  confirmQuantityChange() {
+    this.pendingSnapshot.set(null);
+  }
+
+  rollbackQuantityChange() {
+    const snapshot = this.pendingSnapshot();
+    if (!snapshot) return;
+    this.items.set(snapshot.items);
+    this.pendingSnapshot.set(null);
+  }
+}
+
+async function updateCartQuantityEffect(
+  api: CartApi,
+  domain: CartDomain,
+  itemId: string,
+  quantity: number,
+) {
+  domain.applyQuantityChange(itemId, quantity);
+  try {
+    await api.updateQuantity(itemId, quantity);
+    domain.confirmQuantityChange();
+  } catch {
+    domain.rollbackQuantityChange();
+  }
+}
+```
+
+Placement:
+
+- optimistic mutation starts through an intent entry point
+- success and rollback are handled through result entry points
+- the effect does IO only and routes outcomes back into the domain
+
+## Example 5: Read-Only Composition Layer
+
+```ts
+class AuthDomain {
+  currentUser() {
+    return this.user();
+  }
+}
+
+class PricingDomain {
+  currentPrice() {
+    return this.price();
+  }
+}
+
+class CheckoutReadModel {
+  constructor(
+    private readonly auth: AuthDomain,
+    private readonly pricing: PricingDomain,
+  ) {}
+
+  summary() {
+    return {
+      user: this.auth.currentUser(),
+      total: this.pricing.currentPrice(),
+    };
+  }
+}
+```
+
+Placement:
+
+- the read model owns no mutable state
+- it composes read-only views across domains
+- it does not replace orchestration for stateful behavior

@@ -7,6 +7,8 @@ Use this reference when ownership is unclear or when the task touches existing c
 - Extend an existing domain if it already owns the core state and behavior.
 - Create a new domain only when adding the behavior to an existing domain would mix unrelated responsibility.
 - Prefer one clear owner over splitting closely related state across multiple domains.
+- In class-oriented systems, prefer the class as the ownership boundary when the class can hold state positions, entry points, and pure transforms without ambiguity.
+- Do not treat file-level co-location as the primary ownership signal when the architecture uses explicit domain classes.
 
 ## Routing Questions
 
@@ -50,6 +52,7 @@ Propose a new domain when:
 - Prefer extension over creation.
 - Reuse existing selectors, entry points, and effects when they already match the needed responsibility.
 - Do not add a new layer just to mirror DSFR terminology if the existing code already expresses the same role cleanly.
+- If the project uses explicit domain classes, keep new transforms inside the domain class when they can remain structurally pure.
 
 ## Cross-Domain Access
 
